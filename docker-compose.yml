@@ -1,0 +1,146 @@
+﻿services:
+  # ---------------------- USER SERVICE DB ----------------------
+  userservice_db:
+    image: postgres:15
+    container_name: userservice_db
+    environment:
+      POSTGRES_DB: UserServiceDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Rahul123
+    ports:
+      - "5440:5432"
+    volumes:
+      - userservice-data:/var/lib/postgresql/data
+    networks:
+      - userservice-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------- USER SERVICE ----------------------
+  userservice:
+    build:
+      context: .
+      dockerfile: CustomerService/Dockerfile
+    container_name: userservice
+    environment:
+      ASPNETCORE_URLS: "http://+:80"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Host=userservice_db;Port=5432;Database=UserServiceDb;Username=postgres;Password=Rahul123"
+      Jwt__Key: "tQEr7c2GmO8XblVQxhG3JZwRpdW5PpncnBi3fKipIuErty=!"
+      Jwt__Issuer: "UserService"
+      Jwt__Audience: "UserServiceClients"
+      Jwt__ExpiryMinutes: "60"
+    depends_on:
+      userservice_db:
+        condition: service_healthy
+    networks:
+      - userservice-net
+
+  # ---------------------- PRODUCT SERVICE DB ----------------------
+  productservice_db:
+    image: postgres:15
+    container_name: productservice_db
+    environment:
+      POSTGRES_DB: ProductServiceDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Rahul123
+    ports:
+      - "5441:5432"
+    volumes:
+      - productservice-data:/var/lib/postgresql/data
+    networks:
+      - productservice-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------- PRODUCT SERVICE ----------------------
+  productservice:
+    build:
+      context: .
+      dockerfile: ProductService/Dockerfile
+    container_name: productservice
+    environment:
+      ASPNETCORE_URLS: "http://+:80"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Host=productservice_db;Port=5432;Database=ProductServiceDb;Username=postgres;Password=Rahul123"
+    depends_on:
+      productservice_db:
+        condition: service_healthy
+    networks:
+      - productservice-net
+   # ---------------------- Order SERVICE DB ----------------------
+  orderservice_db:
+    image: postgres:15
+    container_name: orderservice_db
+    environment:
+      POSTGRES_DB: OrderServiceDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Rahul123
+    ports:
+      - "5442:5432"
+    volumes:
+      - orderservice-data:/var/lib/postgresql/data
+    networks:
+      - orderservice-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------- Order SERVICE ----------------------
+  orderservice:
+    build:
+      context: .
+      dockerfile: OrderService/Dockerfile
+    container_name: orderservice
+    environment:
+      ASPNETCORE_URLS: "http://+:80"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Host=orderservice_db;Port=5432;Database=OrderServiceDb;Username=postgres;Password=Rahul123"
+    depends_on:
+      orderservice_db:
+        condition: service_healthy
+    networks:
+      - orderservice-net
+
+  # ---------------------- API GATEWAY ----------------------
+  apigateway:
+    build:
+      context: .
+      dockerfile: ApiGateway/Dockerfile
+    container_name: apigateway
+    environment:
+      ASPNETCORE_URLS: "http://+:80"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    ports:
+      - "7000:80"
+    depends_on:
+      - productservice
+      - userservice
+      - orderservice
+    networks:
+      - userservice-net
+      - productservice-net
+      - orderservice-net
+
+# ---------------------- VOLUMES ----------------------
+volumes:
+  userservice-data:
+  productservice-data:
+  orderservice-data:
+
+# ---------------------- NETWORKS ----------------------
+networks:
+  userservice-net:
+    driver: bridge
+  productservice-net:
+    driver: bridge
+  orderservice-net:
+    driver: bridge
