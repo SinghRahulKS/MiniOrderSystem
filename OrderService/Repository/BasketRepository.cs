@@ -7,7 +7,6 @@ namespace OrderService.Repository
     public class BasketRepository : IBasketRepository
     {
         private readonly OrderDbContext _context;
-
         public BasketRepository(OrderDbContext context)
         {
             _context = context;
